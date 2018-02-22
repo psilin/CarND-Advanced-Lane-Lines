@@ -7,11 +7,10 @@ import test_utils
 def run():
     print('hello world!')
 
-    path = './../camera_cal/'
-
-    ret, mtx, dist = helpers.calibrateCamera(path)
-    test_utils.testCameraCalibration(path, ret, mtx, dist)
-
+    ret, mtx, dist = helpers.calibrateCamera('./../camera_cal/')
+    #test_utils.testCameraCalibration(path, mtx, dist)
+    M, Minv = helpers.warp_matrix()
+    #test_utils.testWarping('./../test_images', M, mtx, dist)
 
 
 if __name__ == '__main__':
