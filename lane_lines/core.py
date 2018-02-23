@@ -9,7 +9,9 @@ def run():
     #test_utils.testCameraCalibration(path, mtx, dist)
     M, Minv = helpers.warp_matrix()
     #test_utils.testWarping('./../test_images', M, mtx, dist)
-    test_utils.testSobelHLS('./../test_images', M, mtx, dist)
+    #test_utils.testSobelHLS('./../test_images', M, mtx, dist)
+    test_utils.testInitialSlidingWindow('./../test_images', M, Minv, mtx, dist)
+    #test_utils.testConvolutionWindow('./../test_images', M, mtx, dist)
 
 
 if __name__ == '__main__':
