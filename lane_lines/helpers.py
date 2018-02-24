@@ -53,6 +53,7 @@ def warp_matrix():
     Minv = cv2.getPerspectiveTransform(dst, src)
     return M, Minv
 
+
 def apply_sobel_and_hls(img):
     """
     @brief apply SobelX operator and HLS to image
@@ -89,6 +90,29 @@ def apply_sobel_and_hls(img):
     combined_binary = np.zeros_like(sxbinary)
     combined_binary[(s_binary == 1) | (sxbinary == 1)] = 1
     return combined_binary, color_binary
+
+
+def get_curvature(binary_warped, left_fit, right_fit):
+    """
+    @brief compute curvature radius of left and right lale lines
+    """
+    ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0])
+    left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
+    right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+
+    y_eval = np.max(ploty)
+
+    ym_per_pix = 30/720 # meters per pixel in y dimension
+    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+
+    # Fit new polynomials to x,y in world space
+    left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
+    right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
+    # Calculate the new radii of curvature
+    left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+    right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+    # Now our radius of curvature is in meters
+    return left_curverad, right_curverad
 
 
 def window_search(binary_warped):
@@ -159,13 +183,23 @@ def window_search(binary_warped):
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
 
+    #compute curvature of lane lines in meters
+    left_curve_rad, right_curve_rad = get_curvature(binary_warped, left_fit, right_fit)
+
+    #compute car center offset from middle of the lane
+    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+    y = out_img.shape[0]
+    leftx = int(round(left_fit[0]*y**2 + left_fit[1]*y + left_fit[2]))
+    rightx = int(round(right_fit[0]*y**2 + right_fit[1]*y + right_fit[2]))
+    center_offset = (out_img.shape[1] - leftx - rightx)//2 * xm_per_pix
+
     lane_img = np.zeros_like(out_img)
     for y in range(0, lane_img.shape[0]):
         leftx = int(round(left_fit[0]*y**2 + left_fit[1]*y + left_fit[2]))
         rightx = int(round(right_fit[0]*y**2 + right_fit[1]*y + right_fit[2]))
         lane_img[y,leftx:rightx + 1] = [0, 255, 0]
 
-    return lane_img
+    return lane_img, left_curve_rad, right_curve_rad, center_offset
 
 
 def make_pipeline(M, Minv, mtx, dist):
@@ -180,10 +214,16 @@ def make_pipeline(M, Minv, mtx, dist):
         combined_binary, color_binary = apply_sobel_and_hls(undistorted)
         img_size = (undistorted.shape[1], undistorted.shape[0])
         binary_warped = cv2.warpPerspective(combined_binary, M, img_size, flags=cv2.INTER_LINEAR)
-        lane_img = window_search(binary_warped)
+        lane_img, left_curve_rad, right_curve_rad, center_offset = window_search(binary_warped)
         unwarped = cv2.warpPerspective(lane_img, Minv, img_size, flags=cv2.INTER_LINEAR)
         unwarped = cv2.addWeighted(undistorted, 1., unwarped, 0.3, 0)
+        cv2.putText(unwarped, 'Offset: {:.2f} m'.format(center_offset), (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(unwarped, 'L rad: {:.2f} km'.format(left_curve_rad / 1000), (40, 80), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(unwarped, 'R rad: {:.2f} km'.format(right_curve_rad / 1000), (40, 120), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)
         return unwarped
 
     return pipeline
+
+
+
 
