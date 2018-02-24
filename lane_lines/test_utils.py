@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-def testCameraCalibration(path, mtx, dist):
+def test_camera_calibration(path, mtx, dist):
     """
     @brief test camera calibration
     """
@@ -28,7 +28,7 @@ def testCameraCalibration(path, mtx, dist):
             plt.show()
 
 
-def testWarping(path, M, mtx, dist):
+def test_warping(path, M, mtx, dist):
     """
     @brief test images warping given test images dir
     """
@@ -64,7 +64,7 @@ def testWarping(path, M, mtx, dist):
             plt.show()
 
 
-def testSobelHLS(path, M, mtx, dist):
+def test_sobel_HLS(path, M, mtx, dist):
     """
     @brief test sobel and HLS application
     """
@@ -95,7 +95,7 @@ def testSobelHLS(path, M, mtx, dist):
             plt.show()
 
 
-def testInitialSlidingWindow(path, M, Minv, mtx, dist):
+def test_initial_sliding_window(path, M, Minv, mtx, dist):
     """
     @brief test initial sliding window algorithm
     """
@@ -194,8 +194,11 @@ def testInitialSlidingWindow(path, M, Minv, mtx, dist):
             cv2.polylines(out_img, left_fit, False, [255,255,0], 8)
             cv2.polylines(out_img, right_fit, False, [255,255,0], 8)
 
-            unwarped = cv2.warpPerspective(out_img, Minv, img_size, flags=cv2.INTER_LINEAR)
-            unwarped = cv2.addWeighted(rgb, 1., unwarped, 10., 0)
+            #function to test
+            lane_img = helpers.window_search(binary_warped)
+
+            unwarped = cv2.warpPerspective(lane_img, Minv, img_size, flags=cv2.INTER_LINEAR)
+            unwarped = cv2.addWeighted(rgb, 1., unwarped, 0.3, 0)
 
             f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(24, 9))
             f.tight_layout()
@@ -210,7 +213,6 @@ def testInitialSlidingWindow(path, M, Minv, mtx, dist):
 
             plt.subplots_adjust(left=0, right=1, top=0.95, bottom=0.05)
             plt.show()
-
 
 
 def window_mask(width, height, img_ref, center,level):
@@ -257,7 +259,7 @@ def find_window_centroids(image, window_width, window_height, margin):
     return window_centroids
 
 
-def testConvolutionWindow(path, M, mtx, dist):
+def test_convolution_window(path, M, mtx, dist):
     """
     @brief test convolution window algorithm
     """
@@ -311,5 +313,31 @@ def testConvolutionWindow(path, M, mtx, dist):
             # Display the final results
             plt.imshow(output)
             plt.title('window fitting results')
+            plt.show()
+
+
+def test_make_pipeline(path, M, Minv, mtx, dist):
+    """
+    @brief test of make pipeline function
+    """
+    pipeline = helpers.make_pipeline(M, Minv, mtx, dist)
+
+    if (os.path.isdir(path)):
+        for file in os.listdir(path):
+            file_path = os.path.join(path, file)
+            if not os.path.isfile(file_path):
+                continue
+
+            img = cv2.imread(file_path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            res_img = pipeline(img)
+
+            f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
+            f.tight_layout()
+            ax1.imshow(img)
+            ax1.set_title('Original Image', fontsize=50)
+            ax2.imshow(res_img)
+            ax2.set_title('Result Image', fontsize=50)
+            plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
             plt.show()
 

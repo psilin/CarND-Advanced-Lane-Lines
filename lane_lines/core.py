@@ -1,17 +1,26 @@
 
 import cv2
+from moviepy.editor import VideoFileClip
 
 import helpers
 import test_utils
 
+
 def run():
     ret, mtx, dist = helpers.calibrateCamera('./../camera_cal/')
-    #test_utils.testCameraCalibration(path, mtx, dist)
+    #test_utils.test_camera_calibration(path, mtx, dist)
     M, Minv = helpers.warp_matrix()
-    #test_utils.testWarping('./../test_images', M, mtx, dist)
-    #test_utils.testSobelHLS('./../test_images', M, mtx, dist)
-    test_utils.testInitialSlidingWindow('./../test_images', M, Minv, mtx, dist)
-    #test_utils.testConvolutionWindow('./../test_images', M, mtx, dist)
+    #test_utils.test_warping('./../test_images', M, mtx, dist)
+    #test_utils.test_sobel_HLS('./../test_images', M, mtx, dist)
+    #test_utils.test_initial_sliding_window('./../test_images', M, Minv, mtx, dist)
+    #test_utils.test_convolution_window('./../test_images', M, mtx, dist)
+    #test_utils.test_make_pipeline('./../test_images', M, Minv, mtx, dist)
+    pipeline = helpers.make_pipeline(M, Minv, mtx, dist)
+
+    output_file = './../output_project_video.mp4'
+    clip1 = VideoFileClip('./../project_video.mp4')
+    output_clip = clip1.fl_image(pipeline)
+    output_clip.write_videofile(output_file, audio=False)
 
 
 if __name__ == '__main__':
