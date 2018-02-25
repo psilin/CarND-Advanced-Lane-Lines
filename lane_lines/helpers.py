@@ -278,8 +278,7 @@ def make_pipeline(M, Minv, mtx, dist, low_pass):
         unwarped = cv2.warpPerspective(lane_img, Minv, img_size, flags=cv2.INTER_LINEAR)
         unwarped = cv2.addWeighted(undistorted, 1., unwarped, 0.3, 0)
         cv2.putText(unwarped, 'Offset: {:.2f} m'.format(center_offset), (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(unwarped, 'L rad: {:.2f} km'.format(left_curve_rad / 1000), (40, 80), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(unwarped, 'R rad: {:.2f} km'.format(right_curve_rad / 1000), (40, 120), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(unwarped, 'Curve rad: {:.2f} km'.format((left_curve_rad + right_curve_rad) / (2*1000)), (40, 80), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)
         return unwarped
 
     return pipeline

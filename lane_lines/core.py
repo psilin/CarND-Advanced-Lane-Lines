@@ -13,7 +13,7 @@ def run():
     low_pass = helpers.LowPassFilter()
 
     ret, mtx, dist = helpers.calibrateCamera('./../camera_cal/')
-    #test_utils.test_camera_calibration(path, mtx, dist)
+    #test_utils.test_camera_calibration('./../camera_cal/', mtx, dist)
     M, Minv = helpers.warp_matrix()
     #test_utils.test_warping('./../test_images', M, mtx, dist)
     #test_utils.test_sobel_HLS('./../test_images', M, mtx, dist)
