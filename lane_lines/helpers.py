@@ -54,6 +54,39 @@ def warp_matrix():
     return M, Minv
 
 
+def apply_mask(img):
+    """
+    @brief select region where lale line is
+    """
+    ysize = img.shape[0]
+    xsize = img.shape[1]
+    region_select = np.copy(img)
+
+    x1 = (100, 590)
+    y1 = (720, 450)
+    x2 = (750, 1200)
+    y2 = (450, 720)
+
+    #ban outside of trapeze
+    fit_left = np.polyfit(x1, y1, 1)
+    fit_right = np.polyfit(x2, y2, 1)
+
+    x3 = (300, 650)
+    y3 = (720, 450)
+    x4 = (1000, 650)
+    y4 = (720, 450)
+
+    #ban inside of triangle
+    fit_inner_left = np.polyfit(x3, y3, 1)
+    fit_inner_right = np.polyfit(x4, y4, 1)
+
+    # Find the region outside the lines
+    XX, YY = np.meshgrid(np.arange(0, xsize), np.arange(0, ysize))
+    outter_region_thresholds = (YY < 450) | (YY < (XX*fit_left[0] + fit_left[1])) | (YY < (XX*fit_right[0] + fit_right[1])) | ((YY > (XX*fit_inner_left[0] + fit_inner_left[1])) & (YY > (XX*fit_inner_right[0] + fit_inner_right[1])))
+    region_select[outter_region_thresholds] = 0#[0, 0, 0]
+    return region_select
+
+
 def apply_sobel_and_hls(img):
     """
     @brief apply SobelX operator and HLS to image
@@ -212,6 +245,7 @@ def make_pipeline(M, Minv, mtx, dist):
         """
         undistorted = cv2.undistort(img, mtx, dist, None, mtx)
         combined_binary, color_binary = apply_sobel_and_hls(undistorted)
+        combined_binary = apply_mask(combined_binary)
         img_size = (undistorted.shape[1], undistorted.shape[0])
         binary_warped = cv2.warpPerspective(combined_binary, M, img_size, flags=cv2.INTER_LINEAR)
         lane_img, left_curve_rad, right_curve_rad, center_offset = window_search(binary_warped)
@@ -223,7 +257,4 @@ def make_pipeline(M, Minv, mtx, dist):
         return unwarped
 
     return pipeline
-
-
-
 

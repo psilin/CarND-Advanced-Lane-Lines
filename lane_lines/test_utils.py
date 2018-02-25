@@ -50,6 +50,17 @@ def test_warping(path, M, mtx, dist):
             cv2.line(undistorted, p1, p3, (255, 0, 0), 5)
             cv2.line(undistorted, p2, p4, (255, 0, 0), 5)
 
+            pr1 = (100, 720)
+            pr2 = (1200, 720)
+            pr3 = (550, 450)
+            pr4 = (750, 450)
+            cv2.line(undistorted, pr1, pr2, (0, 255, 255), 5)
+            cv2.line(undistorted, pr3, pr4, (0, 255, 255), 5)
+            cv2.line(undistorted, pr1, pr3, (0, 255, 255), 5)
+            cv2.line(undistorted, pr2, pr4, (0, 255, 255), 5)
+
+            undistorted = helpers.apply_mask(undistorted)
+
             gray = cv2.cvtColor(undistorted, cv2.COLOR_BGR2GRAY)
             img_size = (gray.shape[1], gray.shape[0])
             warped = cv2.warpPerspective(gray, M, img_size, flags=cv2.INTER_LINEAR)
@@ -78,6 +89,7 @@ def test_sobel_HLS(path, M, mtx, dist):
             undistorted = cv2.undistort(img, mtx, dist, None, mtx)
             rgb = cv2.cvtColor(undistorted, cv2.COLOR_BGR2RGB)
             combined_binary, color_binary = helpers.apply_sobel_and_hls(rgb)
+            combined_binary = helpers.apply_mask(combined_binary)
             img_size = (rgb.shape[1], rgb.shape[0])
             warped = cv2.warpPerspective(combined_binary, M, img_size, flags=cv2.INTER_LINEAR)
 
@@ -195,7 +207,7 @@ def test_initial_sliding_window(path, M, Minv, mtx, dist):
             cv2.polylines(out_img, right_fit, False, [255,255,0], 8)
 
             #function to test
-            lane_img = helpers.window_search(binary_warped)
+            lane_img, left_curve_rad, right_curve_rad, center_offset = helpers.window_search(binary_warped)
 
             unwarped = cv2.warpPerspective(lane_img, Minv, img_size, flags=cv2.INTER_LINEAR)
             unwarped = cv2.addWeighted(rgb, 1., unwarped, 0.3, 0)
