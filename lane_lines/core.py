@@ -7,6 +7,11 @@ import test_utils
 
 
 def run():
+    """
+    @brief main entry point uses pipeline to process given video
+    """
+    low_pass = helpers.LowPassFilter()
+
     ret, mtx, dist = helpers.calibrateCamera('./../camera_cal/')
     #test_utils.test_camera_calibration(path, mtx, dist)
     M, Minv = helpers.warp_matrix()
@@ -15,7 +20,8 @@ def run():
     #test_utils.test_initial_sliding_window('./../test_images', M, Minv, mtx, dist)
     #test_utils.test_convolution_window('./../test_images', M, mtx, dist)
     #test_utils.test_make_pipeline('./../test_images', M, Minv, mtx, dist)
-    pipeline = helpers.make_pipeline(M, Minv, mtx, dist)
+
+    pipeline = helpers.make_pipeline(M, Minv, mtx, dist, low_pass)
 
     output_file = './../output_project_video.mp4'
     clip1 = VideoFileClip('./../project_video.mp4')

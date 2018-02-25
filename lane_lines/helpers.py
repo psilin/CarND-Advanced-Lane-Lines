@@ -3,6 +3,28 @@ import cv2
 import numpy as np
 import os
 
+class LowPassFilter:
+    """
+    @brief low pass filter for polynomes
+    """
+    def __init__(self):
+        self.init = False
+        self.alpha = 1./8
+        self.left = None
+        self.right = None
+
+
+    def run(self, left_fit, right_fit):
+        if self.init is False:
+            self.left = left_fit
+            self.right = right_fit
+            self.init = True
+        else:
+            self.left = self.left * (1. - self.alpha) + left_fit * self.alpha
+            self.right = self.right * (1. - self.alpha) + right_fit * self.alpha
+
+        return self.left, self.right
+
 
 def calibrateCamera(path):
     """
@@ -56,7 +78,7 @@ def warp_matrix():
 
 def apply_mask(img):
     """
-    @brief select region where lale line is
+    @brief select region where lane line is
     """
     ysize = img.shape[0]
     xsize = img.shape[1]
@@ -148,7 +170,7 @@ def get_curvature(binary_warped, left_fit, right_fit):
     return left_curverad, right_curverad
 
 
-def window_search(binary_warped):
+def window_search(binary_warped, low_pass):
     """
     @brief apply window search to find lane on binary warped image
     """
@@ -216,6 +238,10 @@ def window_search(binary_warped):
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
 
+    #filter polys
+    if (low_pass is not None):
+        left_fit, right_fit = low_pass.run(left_fit, right_fit)
+
     #compute curvature of lane lines in meters
     left_curve_rad, right_curve_rad = get_curvature(binary_warped, left_fit, right_fit)
 
@@ -235,7 +261,7 @@ def window_search(binary_warped):
     return lane_img, left_curve_rad, right_curve_rad, center_offset
 
 
-def make_pipeline(M, Minv, mtx, dist):
+def make_pipeline(M, Minv, mtx, dist, low_pass):
     """
     @brief pipeline closure
     """
@@ -248,7 +274,7 @@ def make_pipeline(M, Minv, mtx, dist):
         combined_binary = apply_mask(combined_binary)
         img_size = (undistorted.shape[1], undistorted.shape[0])
         binary_warped = cv2.warpPerspective(combined_binary, M, img_size, flags=cv2.INTER_LINEAR)
-        lane_img, left_curve_rad, right_curve_rad, center_offset = window_search(binary_warped)
+        lane_img, left_curve_rad, right_curve_rad, center_offset = window_search(binary_warped, low_pass)
         unwarped = cv2.warpPerspective(lane_img, Minv, img_size, flags=cv2.INTER_LINEAR)
         unwarped = cv2.addWeighted(undistorted, 1., unwarped, 0.3, 0)
         cv2.putText(unwarped, 'Offset: {:.2f} m'.format(center_offset), (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)

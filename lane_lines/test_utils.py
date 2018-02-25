@@ -207,7 +207,7 @@ def test_initial_sliding_window(path, M, Minv, mtx, dist):
             cv2.polylines(out_img, right_fit, False, [255,255,0], 8)
 
             #function to test
-            lane_img, left_curve_rad, right_curve_rad, center_offset = helpers.window_search(binary_warped)
+            lane_img, left_curve_rad, right_curve_rad, center_offset = helpers.window_search(binary_warped, None)
 
             unwarped = cv2.warpPerspective(lane_img, Minv, img_size, flags=cv2.INTER_LINEAR)
             unwarped = cv2.addWeighted(rgb, 1., unwarped, 0.3, 0)
@@ -332,7 +332,7 @@ def test_make_pipeline(path, M, Minv, mtx, dist):
     """
     @brief test of make pipeline function
     """
-    pipeline = helpers.make_pipeline(M, Minv, mtx, dist)
+    pipeline = helpers.make_pipeline(M, Minv, mtx, dist, None)
 
     if (os.path.isdir(path)):
         for file in os.listdir(path):
