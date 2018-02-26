@@ -75,9 +75,9 @@ def test_warping(path, M, mtx, dist):
             plt.show()
 
 
-def test_sobel_HLS(path, M, mtx, dist):
+def test_color_spaces(path, M, mtx, dist):
     """
-    @brief test sobel and HLS application
+    @brief test color spaces application
     """
     if (os.path.isdir(path)):
         for file in os.listdir(path):
@@ -88,7 +88,7 @@ def test_sobel_HLS(path, M, mtx, dist):
             img = cv2.imread(file_path)
             undistorted = cv2.undistort(img, mtx, dist, None, mtx)
             rgb = cv2.cvtColor(undistorted, cv2.COLOR_BGR2RGB)
-            combined_binary, color_binary = helpers.apply_sobel_and_hls(rgb)
+            combined_binary, color_binary = helpers.apply_color_spaces(rgb)
             combined_binary = helpers.apply_mask(combined_binary)
             img_size = (rgb.shape[1], rgb.shape[0])
             warped = cv2.warpPerspective(combined_binary, M, img_size, flags=cv2.INTER_LINEAR)
@@ -120,15 +120,15 @@ def test_initial_sliding_window(path, M, Minv, mtx, dist):
             img = cv2.imread(file_path)
             undistorted = cv2.undistort(img, mtx, dist, None, mtx)
             rgb = cv2.cvtColor(undistorted, cv2.COLOR_BGR2RGB)
-            combined_binary, color_binary = helpers.apply_sobel_and_hls(rgb)
             img_size = (rgb.shape[1], rgb.shape[0])
-            binary_warped = cv2.warpPerspective(combined_binary, M, img_size, flags=cv2.INTER_LINEAR)
+            warped = cv2.warpPerspective(rgb, M, img_size, flags=cv2.INTER_LINEAR)
+            combined_binary, color_binary = helpers.apply_color_spaces(warped)
 
             # Assuming you have created a warped binary image called "binary_warped"
             # Take a histogram of the bottom half of the image
-            histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
+            histogram = np.sum(combined_binary[combined_binary.shape[0]//2:,:], axis=0)
             # Create an output image to draw on and  visualize the result
-            out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
+            out_img = np.dstack((combined_binary, combined_binary, combined_binary))*255
             # Find the peak of the left and right halves of the histogram
             # These will be the starting point for the left and right lines
             midpoint = np.int(histogram.shape[0]/2)
@@ -138,9 +138,9 @@ def test_initial_sliding_window(path, M, Minv, mtx, dist):
             # Choose the number of sliding windows
             nwindows = 9
             # Set height of windows
-            window_height = np.int(binary_warped.shape[0]/nwindows)
+            window_height = np.int(combined_binary.shape[0]/nwindows)
             # Identify the x and y positions of all nonzero pixels in the image
-            nonzero = binary_warped.nonzero()
+            nonzero = combined_binary.nonzero()
             nonzeroy = np.array(nonzero[0])
             nonzerox = np.array(nonzero[1])
             # Current positions to be updated for each window
@@ -157,8 +157,8 @@ def test_initial_sliding_window(path, M, Minv, mtx, dist):
             # Step through the windows one by one
             for window in range(nwindows):
                 # Identify window boundaries in x and y (and right and left)
-                win_y_low = binary_warped.shape[0] - (window+1)*window_height
-                win_y_high = binary_warped.shape[0] - window*window_height
+                win_y_low = combined_binary.shape[0] - (window+1)*window_height
+                win_y_high = combined_binary.shape[0] - window*window_height
                 win_xleft_low = leftx_current - margin
                 win_xleft_high = leftx_current + margin
                 win_xright_low = rightx_current - margin
@@ -192,7 +192,7 @@ def test_initial_sliding_window(path, M, Minv, mtx, dist):
             left_fit = np.polyfit(lefty, leftx, 2)
             right_fit = np.polyfit(righty, rightx, 2)
 
-            ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0])
+            ploty = np.linspace(0, combined_binary.shape[0]-1, combined_binary.shape[0])
             left_fitx = np.rint(left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2])
             right_fitx = np.rint(right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2])
 
@@ -207,7 +207,7 @@ def test_initial_sliding_window(path, M, Minv, mtx, dist):
             cv2.polylines(out_img, right_fit, False, [255,255,0], 8)
 
             #function to test
-            lane_img, left_curve_rad, right_curve_rad, center_offset = helpers.window_search(binary_warped, None)
+            lane_img, left_curve_rad, right_curve_rad, center_offset = helpers.window_search(combined_binary, None)
 
             unwarped = cv2.warpPerspective(lane_img, Minv, img_size, flags=cv2.INTER_LINEAR)
             unwarped = cv2.addWeighted(rgb, 1., unwarped, 0.3, 0)
@@ -216,7 +216,7 @@ def test_initial_sliding_window(path, M, Minv, mtx, dist):
             f.tight_layout()
             ax1.imshow(rgb, cmap='gray')
             ax1.set_title('Original undistorted image', fontsize=10)
-            ax2.imshow(binary_warped, cmap='gray')
+            ax2.imshow(warped, cmap='gray')
             ax2.set_title('Warped image', fontsize=10)
             ax3.imshow(unwarped)
             ax3.set_title('Unwarped result image', fontsize=10)
@@ -284,7 +284,7 @@ def test_convolution_window(path, M, mtx, dist):
             img = cv2.imread(file_path)
             undistorted = cv2.undistort(img, mtx, dist, None, mtx)
             rgb = cv2.cvtColor(undistorted, cv2.COLOR_BGR2RGB)
-            combined_binary, color_binary = helpers.apply_sobel_and_hls(rgb)
+            combined_binary, color_binary = helpers.apply_color_spaces(rgb)
             img_size = (rgb.shape[1], rgb.shape[0])
             warped = cv2.warpPerspective(combined_binary, M, img_size, flags=cv2.INTER_LINEAR)
 

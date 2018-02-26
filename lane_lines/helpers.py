@@ -9,7 +9,7 @@ class LowPassFilter:
     """
     def __init__(self):
         self.init = False
-        self.alpha = 1./8
+        self.alpha = 1./2
         self.left = None
         self.right = None
 
@@ -109,41 +109,36 @@ def apply_mask(img):
     return region_select
 
 
-def apply_sobel_and_hls(img):
+def apply_color_spaces(img):
     """
-    @brief apply SobelX operator and HLS to image
+    @brief apply Luv (L for white) and Lab (b for yellow) color spaces
     """
-
-    # Convert to HLS color space and separate the S channel
-    # Note: img is the undistorted image
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    s_channel = hls[:,:,2]
-
-    # Sobel x
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0) # Take the derivative in x
-    abs_sobelx = np.absolute(sobelx) # Absolute x derivative to accentuate lines away from horizontal
-    scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
-
-    # Threshold x gradient
-    thresh_min = 20
-    thresh_max = 100
-    sxbinary = np.zeros_like(scaled_sobel)
-    sxbinary[(scaled_sobel >= thresh_min) & (scaled_sobel <= thresh_max)] = 1
-
+    # Convert to Luv color space and separate the V channel
+    Luv = cv2.cvtColor(img, cv2.COLOR_RGB2Luv)
+    l_channel = Luv[:,:,0]
     # Threshold color channel
-    s_thresh_min = 170
-    s_thresh_max = 255
-    s_binary = np.zeros_like(s_channel)
-    s_binary[(s_channel >= s_thresh_min) & (s_channel <= s_thresh_max)] = 1
+    l_thresh_min = 210
+    l_thresh_max = 255
+    l_binary = np.zeros_like(l_channel)
+    l_binary[(l_channel >= l_thresh_min) & (l_channel <= l_thresh_max)] = 1
+
+    # Convert to Lab color space and separate the b channel
+    Lab = cv2.cvtColor(img, cv2.COLOR_RGB2Lab)
+    b_channel = Lab[:,:,2]
+    # Threshold color channel
+    b_thresh_min = 155
+    b_thresh_max = 255
+    b_binary = np.zeros_like(b_channel)
+    b_binary[(b_channel >= b_thresh_min) & (b_channel <= b_thresh_max)] = 1
+
 
     # Stack each channel to view their individual contributions in green and blue respectively
     # This returns a stack of the two binary images, whose components you can see as different colors
-    color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binary)) * 255
+    color_binary = np.dstack((np.zeros_like(l_binary), l_binary, b_binary)) * 255
 
     # Combine the two binary thresholds
-    combined_binary = np.zeros_like(sxbinary)
-    combined_binary[(s_binary == 1) | (sxbinary == 1)] = 1
+    combined_binary = np.zeros_like(l_binary)
+    combined_binary[(l_binary == 1) | (b_binary == 1)] = 1
     return combined_binary, color_binary
 
 
@@ -239,7 +234,8 @@ def window_search(binary_warped, low_pass):
     right_fit = np.polyfit(righty, rightx, 2)
 
     #filter polys
-    if (low_pass is not None):
+    #print(left_fit[0], right_fit[0], left_fit[0] * right_fit[0])
+    if low_pass is not None and left_fit[0] * right_fit[0] >= 0:
         left_fit, right_fit = low_pass.run(left_fit, right_fit)
 
     #compute curvature of lane lines in meters
@@ -270,11 +266,11 @@ def make_pipeline(M, Minv, mtx, dist, low_pass):
         @brief pipeline takes RGB img returns RGB img with line
         """
         undistorted = cv2.undistort(img, mtx, dist, None, mtx)
-        combined_binary, color_binary = apply_sobel_and_hls(undistorted)
-        combined_binary = apply_mask(combined_binary)
+        undistorted_masked = apply_mask(undistorted)
         img_size = (undistorted.shape[1], undistorted.shape[0])
-        binary_warped = cv2.warpPerspective(combined_binary, M, img_size, flags=cv2.INTER_LINEAR)
-        lane_img, left_curve_rad, right_curve_rad, center_offset = window_search(binary_warped, low_pass)
+        warped = cv2.warpPerspective(undistorted_masked, M, img_size, flags=cv2.INTER_LINEAR)
+        combined_binary, color_binary = apply_color_spaces(warped)
+        lane_img, left_curve_rad, right_curve_rad, center_offset = window_search(combined_binary, low_pass)
         unwarped = cv2.warpPerspective(lane_img, Minv, img_size, flags=cv2.INTER_LINEAR)
         unwarped = cv2.addWeighted(undistorted, 1., unwarped, 0.3, 0)
         cv2.putText(unwarped, 'Offset: {:.2f} m'.format(center_offset), (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 2, cv2.LINE_AA)
