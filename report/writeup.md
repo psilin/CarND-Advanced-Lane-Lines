@@ -29,6 +29,12 @@ The goals / steps of this project are the following:
 [image9]: ./figs/Fig9_Sl_win.png
 [image10]: ./figs/Fig10_pipe.png
 [image11]: ./figs/Fig11_pipe.png
+[image12]: ./figs/Fig12.png
+[image13]: ./figs/Fig13.png
+[image14]: ./figs/Fig14.png
+[image15]: ./figs/Fig15.png
+[image16]: ./figs/Fig16.png
+[image17]: ./figs/Fig17.png
 
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -178,6 +184,39 @@ Resulting video is in `output_project_video.mp4` file. Video is processed frame 
  * warping image back to car's view perspective using `Minv` matrix;
  * adding found lane lines to original undistorted image and drawing useful information on it.
 
+#### 2. Changes added to pipeline before resubmission.
+
+First of all, as had been sujested by reviewer instead of SobelX and `S` of HLS thresholds I added `L` of Luv and `b` of Lab thresholds. Then I saved frames fron project video, particularly
+from th second bridge, which is the most harsh part of video to test my pipeline on it. First 3 of 4 following images are from that bridge, the last one shows how color space thresholds performs
+in normal invoronment. It can be seen that (comparing to the pictures of SobelX and HLS related part of report) `L` and `b` thresholds outperforms SobelX and `S` threshold greatly.
+
+![alt text][image14]
+
+![alt text][image15]
+
+![alt text][image16]
+
+![alt text][image17]
+
+`b` channel is needed to track yellow objects and painted in blue on pictures above and `L` channel is used to track white objects and is painted in green. I started from more strict thresholds
+so almost no objects outside of lale lines are detected but then I decided make it a little less strict so it can perform better (detect more pixels) in areas with a lot of sun light.
+
+Second, I swapped order of 2 operations in pipeline. I used to apply warping after color channels but reviewer sujested to apply warping before as warping of binary image introduces more mistakes
+comparing to 3-channel image.
+
+Third idea was to introduce outlier rejection. First, better performance of pipeline allowed me to make smoothing constant in low-pass filter much less. It resulted in smoother performance of lane
+detection. Second, I studied frames of the second bridge and realized that the frames where my pipeline performed in the worst way had one thing in common - lane lines had different sign of curvature value
+(coeffitians of the leading term of two lale line fitting polynomes had different sign). I decided to not use such polynome pairs in my low pass filter. That helped me to mitigate trembling of the found lane
+on the second bridge. First picture below shows situation where everything is ok, second picture below shows a frame that is rejected from low pass filter (it can be clearly seen on the right bottom picture
+that fitting polynomes have leading coefficients of differnt sign).
+
+![alt text][image12]
+
+![alt text][image13]
+
+The last idea was to use are around previous fitting polynomes as a starting point of finding new fitting polynome. If nothing is found default histogram based approach can be used. I decided not to implement
+this feature as it seemed like a big refactoring to my pipeline and performance of the pipeline on project video seemed good to me.
+
 ---
 
 ### Discussion
@@ -195,8 +234,24 @@ continuous, fitting polynome coefficients and curvature radious were continuous.
 lines polynome coefficients so I could have some memory of what lane lines looked like on previous frames. It helped to decrease outliers values. I tried different values for `alpha` parameter 
 and ended up with `alpha = 1./6.` as it greatly decreased outliers yet polynomes reacted quite good on curvature changing.
 
-Though I did not manage to remove all outliers and lane lines were a little noisy. Possible steps are to make threshold tweaks in SobelX and HLS-related function as I just used arameters as it was.
+Though I did not manage to remove all outliers and lane lines were a little noisy. Possible steps are to make threshold tweaks in SobelX and HLS-related function as I just used parameters as it was.
 Another idea is to use memory and filtering as much as possible as everything is quite continuous in this project (and no need to use window search from the very beginning on each frame). So memory 
 of successful detections in non-noisy environment should be used. Another idea is to impelement outliers detection procedure. If everything is continuous obtained vaues should not differ much from 
 filtered or remembered values. So if value differs much it should be rejected.
+
+#### 2. Ideas added before resubmission.
+
+First idea is (as it has been already discussed) using area around of successfully found fitting polynomes as a starting point to new fitting polynome window search. It can speed up lane line detection process.
+
+Second idea is to make pipeline more robust. I tried to apply my pipeline to challenge videos and found out that sometimes there frames where pixels were not detected so the set which was used to compute fitting
+polynome was empty. Possible solution is to try rediscover lane line pixels using more relaxed color space channel thesholds.
+
+Third idea is closely related to second. There are frames where there is a lot of sun light it prevents camera from seeing clearly and lane lines looks allmost the same as other parts of the road. Again, more relaxed thresholds
+can be used to improve detection.
+
+Fourth idea is to track objects. Some car or bike cross lane line during one of the challenge videos. It is clear that when car is on the lane line it covers some part of line. So the idea is to track object and not try to find 
+lane line in part of frame where this object is at the moment.
+
+Fifth idea is as follows. It can be clearly seen that on challenge video that some part of car's torpedo is reflected in frame. The idea is to filter out this effect. Maybe by analizing serie of images and realizing that there is 
+some objects that are in every recorded frame and consider this objects as a part of the car. Looks similair to camera calibration somehow, but an adaptive one.
 
