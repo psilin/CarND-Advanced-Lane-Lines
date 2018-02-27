@@ -14,12 +14,12 @@ class LowPassFilter:
         self.right = None
 
 
-    def run(self, left_fit, right_fit):
+    def run(self, left_fit, right_fit, check_value):
         if self.init is False:
             self.left = left_fit
             self.right = right_fit
             self.init = True
-        else:
+        elif check_value >= 0:
             self.left = self.left * (1. - self.alpha) + left_fit * self.alpha
             self.right = self.right * (1. - self.alpha) + right_fit * self.alpha
 
@@ -235,8 +235,8 @@ def window_search(binary_warped, low_pass):
 
     #filter polys
     #print(left_fit[0], right_fit[0], left_fit[0] * right_fit[0])
-    if low_pass is not None and left_fit[0] * right_fit[0] >= 0:
-        left_fit, right_fit = low_pass.run(left_fit, right_fit)
+    if low_pass is not None:
+        left_fit, right_fit = low_pass.run(left_fit, right_fit, left_fit[0] * right_fit[0])
 
     #compute curvature of lane lines in meters
     left_curve_rad, right_curve_rad = get_curvature(binary_warped, left_fit, right_fit)
